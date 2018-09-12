@@ -1,0 +1,332 @@
+---
+title: "Exploratory analysis of Ceat data"
+author: "Group 2"
+date: "October 4, 2017"
+output: html_document
+---
+###Background
+- Established in 1924 at Turino in Italy, and manufactured cables for Telephone and Railways.
+- Came to India in 1958 as Ceat Tyres of India Ltd in collaboration with TATA group.
+- In 1982, RPG took over Ceat Tyres of India and in 1990 renamed it as Ceat Ltd.
+- Manufactures over 2 crore tyres every Year.
+- More than 6,000 crore annual turnover.
+- Export to 130 Countries.
+
+###Objective
+- Forecast Ceat sales across various reatilers to assess variation and trend in business using the data for year 2016 and 2017.
+- Predict which reatilers are the highest performer for Ceat.
+- Analysis of reatilers potential and perform dealers segmentation to develope new marketing strategies.
+- Understanding Ceat market share comparing with competitor's sales data.
+
+###Supply chain:
+- **Company--> Dealers--> Retailers--> Consumers**.
+- Retailers are customer in our project.
+
+
+###1. Understanding data
+** import data set Ceat_tyresdata**
+```{r}
+#import data
+ceatdata<-read.csv("Ceat_tyresdata.csv",header=T)
+summary(ceatdata)
+```
+
+```{r, meassage=FALSE,warning=FALSE, customer=NA, eval=TRUE, echo=FALSE,error=FALSE}
+# Install packages- ggplot2, dplyr,plotrix,data.table,lubridate
+# Load  packages (ggplot2,dplyr,plotrix,data.table,lubridate) into the current R environment
+suppressMessages(library(ggplot2))
+suppressMessages(library(plyr))
+suppressMessages(library(dplyr))
+suppressMessages(library(plotrix))
+suppressMessages(library(data.table))
+suppressMessages(library(lubridate))
+suppressMessages(require(zoo))
+suppressMessages(require(scales))
+#converting 'factor' into 'date'
+ceatdata$invoiceDate<-mdy(ceatdata$invoiceDate)
+#sorted ceat data based on invoice date
+ceatdata <-arrange(ceatdata, invoiceDate)
+#Creating a seperate variable for "month"
+ceatdata$month<-month(ceatdata$invoiceDate,label = T)
+#Creating a seperate variable for "year" and format to yy
+ceatdata$year<-format(ceatdata$invoiceDate, "%y")
+```
+
+###2. Based on 12 months data from 1 july 2016-30 june 2017 Show number of unique values of state,district, category, product, Product Name, Distributor, Retailer, Retailer Channel Name, Retailer Group Name, Retailer Class Name.
+**1. What is the count of unique state in the data set?**
+```{r}
+DATE1ToCompare <- as.Date("2016-07-01")
+DATE2ToCompare <- as.Date("2017-06-30")
+ceatdata_1yearTillJune <- ceatdata[ceatdata$invoiceDate >= DATE1ToCompare & ceatdata$invoiceDate <= DATE2ToCompare,]
+
+noofState<-length(unique(ceatdata_1yearTillJune$state))
+noofState
+```
+
+**2. What is the count of unique district in the data set?**
+```{r}
+noofdistrict<-length(unique(ceatdata_1yearTillJune$district))
+noofdistrict
+```
+
+**3. What is the count of unique category of tyres in the data set?**
+```{r}
+noofcategory<-length(unique(ceatdata_1yearTillJune$category))
+noofcategory
+```
+
+**4. What is the number of unique products in the data set?**
+```{r}
+noofproductCode<-length(unique(ceatdata_1yearTillJune$productCode))
+noofproductCode
+```
+
+**5. What is the number of unique products in the data set?**
+```{r}
+noofproductName<-length(unique(ceatdata_1yearTillJune$productName))
+noofproductName
+```
+
+**6. What is the number of unique distributor in the data set?**
+```{r}
+noofdistributorCode<-length(unique(ceatdata_1yearTillJune$distributorCode))
+noofdistributorCode
+```
+
+**7. What is the number of unique retailer in the data set?**
+```{r}
+noofretailercode<-length(unique(ceatdata_1yearTillJune$retailerCode))
+noofretailercode
+```
+
+**8. What is the number of unique retailer Channel Name in the data set?**
+```{r}
+noofretailerChannelName<-length(unique(ceatdata_1yearTillJune$retailerChannelName))
+noofretailerChannelName
+```
+
+**9. What is the number of unique retailer Group Name in the data set?**
+```{r}
+noofretailerGroupName<-length(unique(ceatdata_1yearTillJune$retailerGroupName))
+noofretailerGroupName
+```
+
+**10. What is the number of unique retailer Class Name in the data set?**
+```{r}
+noofretailerClassName<-length(unique(ceatdata_1yearTillJune$retailerClassName))
+noofretailerClassName
+```
+
+
+###4. Find monthly sales for all 15 months. Show graphically 
+```{r}
+#Monthly sales for all 15 months
+monthly_sales<-aggregate(netValue~month+year,data = ceatdata,FUN = sum)
+# rounding net value to 1 decimal place
+monthly_sales$netValue<-round(monthly_sales$netValue, 1)
+monthly_sales
+# set up the plot 
+ggplot(monthly_sales, aes(x=month, 
+                 y=netValue, group=year, colour=factor(year))) + 
+  geom_line() +
+  geom_point() +
+  scale_y_continuous(labels = comma,limits = NULL)+
+  #geom_text(data = monthly_sales, aes(label = monthly_sales$netValue))+
+  labs(x="",y="Net Sale Value", colour="Year", title="Sale for year 2016 and 2017")
+```
+
+###5. Monthly sales for all 15 months for each Retailer Channel Name.Show graphically
+```{r}
+monthly_sales_retailerChannel<-aggregate(netValue~month+year+retailerChannelName,data = ceatdata,FUN = sum)
+# adding new column 
+monthly_sales_retailerChannel$monthyear<-paste(monthly_sales_retailerChannel$month,monthly_sales_retailerChannel$year,sep ="-")
+monthly_sales_retailerChannel$monthyear<-as.yearmon(monthly_sales_retailerChannel$monthyea, "%b-%y")
+monthly_sales_retailerChannel
+# set up the plot
+ggplot(data = monthly_sales_retailerChannel, aes(x=monthyear, y=netValue, group=retailerChannelName, colour=factor(retailerChannelName)))+ 
+  geom_line()+
+  geom_point()+
+  labs(y="NSV", title="Trend of monthly sales",colour="Retailer Channel Name")+
+  theme(plot.title=element_text(face="bold"))+
+  scale_x_yearmon(format = "%b %Y",limits = NULL)+
+  scale_y_continuous(labels = comma,limits = NULL)+
+  #scale_x_continuous(xtfrm.Date()))+
+  theme(axis.text.x = element_text(angle=20, vjust=0.6))
+```
+
+###6. Monthly sales for all 15 months for Retailer Class Name.Show graphically
+```{r}
+monthly_sales_retailerClass<-aggregate(netValue~month+year+retailerClassName,data = ceatdata,FUN = sum)
+# adding new column 
+monthly_sales_retailerClass$monthyear<-paste(monthly_sales_retailerClass$month,monthly_sales_retailerClass$year,sep ="-")
+monthly_sales_retailerClass$monthyear<-as.yearmon(monthly_sales_retailerClass$monthyea, "%b-%y")
+monthly_sales_retailerClass
+# set up the plot
+ggplot(data = monthly_sales_retailerClass, aes(x=monthyear, y=netValue, group=retailerClassName, colour=factor(retailerClassName)))+ 
+  geom_line(size=1)+
+  geom_point()+
+  labs(y="Net Sale Value",x="Months", title="Monthly sales based on retailer class",colour="Retailer Class Name")+
+  theme(plot.title=element_text(face="bold"))+
+  scale_x_yearmon(format = "%b %Y",limits = NULL)+
+  scale_y_continuous(labels = comma,limits = NULL)+
+  #scale_x_continuous(xtfrm.Date()))+
+  theme(axis.text.x = element_text(angle=20, vjust=0.6))
+```
+
+###7. Find monthly sales for all 15 months for Retailer Group Name. Show graphically
+```{r}
+# calculate agrregate netvalue(total netvalue) group by retailerGroupName
+monthly_sales_retailerGroup<-aggregate(netValue~month+year+retailerGroupName,data = ceatdata,FUN = sum)
+# adding new column 
+monthly_sales_retailerGroup$monthyear<-paste(monthly_sales_retailerGroup$month,monthly_sales_retailerGroup$year,sep ="-")
+monthly_sales_retailerGroup$monthyear<-as.yearmon(monthly_sales_retailerGroup$monthyear, "%b-%y")
+#create a colour scheme based on grouping variable 'retailerGroupName'
+retailerGroupName <-c("EXCLUSIVE","MOTOR CYCLE AND SCOOTER","MULTI BRAND","PCR AND UUR","WITH WHEEL ALIGNMENT","WITHOUT WHEEL ALIGNMENT")
+colorcodes<-as.character(c("#3399FF", "#FF0000","#350d0d","#0b0be0","#e6ea07","#42f606"))
+df2=data.frame(retailerGroupName, colorcodes)
+monthly_sales_retailerGroup <-merge(monthly_sales_retailerGroup,df2, by=("retailerGroupName"), all.x=TRUE, all.y=TRUE)
+monthly_sales_retailerGroup
+# set up the plot
+ggplot(data = monthly_sales_retailerGroup, aes(x=monthyear, y=netValue, colour = retailerGroupName))+ 
+  geom_line()+
+  geom_point()+
+  labs(y="Net Sale Value",x= "Months", title="Monthly sales reatiler group wise",colour="Retailer Group Name")+
+  theme(plot.title=element_text(face="bold"))+
+  scale_x_yearmon(format = "%b %Y")+
+  scale_y_continuous(labels = comma)+
+  #scale_x_continuous(xtfrm.Date()))+
+  theme(axis.text.x = element_text(angle=20))+
+  scale_colour_manual(breaks = monthly_sales_retailerGroup$retailerGroupName, 
+                      values = unique(as.character(monthly_sales_retailerGroup$colorcodes)))
+```
+
+###8. Aggregate 12 months sales by Retailer Class and show their percentage contribution and no. of retailers
+```{r}
+# Set variable with value  2017-05-01, which will be used in subset function to extract data for 1 year 
+DateTocompare<-as.Date("2017-05-01")
+# get data for 1 year out of the main data frame.
+ceatdata_1year<-subset(ceatdata, invoiceDate < DateTocompare)
+#calculate agrregate netvalue(total netvalue) group by retailerClassName on the new data frame created
+Aggregare_retailerClassName<-aggregate(netValue~retailerClassName,data=ceatdata_1year,FUN="sum")
+Aggregare_retailerClassName
+# get total netValue
+TotalNet<-sum(ceatdata_1year$netValue)
+# Create function to calculate percentage contribution on total netValue
+percentfunc<-function(x)100*sum(x)/TotalNet
+# calculate percentage contribution on total netValue group by retailerClassName on the new data frame created
+percentcontribution<-aggregate(netValue~retailerClassName,data=ceatdata_1year,FUN=percentfunc)
+# get percentage value and rounding to 1 decomal place
+piepercent<- round(percentcontribution$netValue, 1)
+piepercent
+# Get no. of retailers for each retailerClassName.
+noofreatilersclasswise<-setDT(ceatdata_1year)[, .(count = uniqueN(retailerCode)), by = retailerClassName]
+noofreatilersclasswise
+# Percentage distribution of Net value for retailerClassName using pie chart 
+pie(percentcontribution$netValue, labels = piepercent, main = "Contribution of each retailer class to the total sale",col = rainbow(length(percentcontribution$netValue)))
+legend("topright", c("CLASS A","CLASS B","CLASS C"), cex = 0.8,
+       fill = rainbow(length(percentcontribution$netValue)))
+```
+
+###9. Aggregate 12 months sales by Retailer Channel and show their percentage contribution and no. of retailers
+```{r}
+#calculate agrregate netvalue(total netvalue) group by Retailer Channel on the new data frame created
+Aggregare_retailerChannelName<-aggregate(netValue~retailerChannelName,data=ceatdata_1year,FUN="sum")
+Aggregare_retailerChannelName
+# calculate percentage contribution on total netValue group by retailerChannelName
+percentcontribution_retailerChannelName<-aggregate(netValue~retailerChannelName,data=ceatdata_1year,FUN=percentfunc)
+# get percentage value and rounding to 1 decomal place
+piepercent<- round(percentcontribution_retailerChannelName$netValue, 1)
+piepercent
+# Get no. of retailers for each retailerChannelName
+noofreatilerschannelwise<-setDT(ceatdata_1year)[, .(count = uniqueN(retailerCode)), by = retailerChannelName]
+noofreatilerschannelwise
+# Percentage distribution of Net value for retailerChannelName using pie chart 
+pie(percentcontribution_retailerChannelName$netValue, labels = piepercent, main = "net value pie chart for retailer channels",col = rainbow(length(percentcontribution_retailerChannelName$netValue)))
+legend("topright", c("MULTI BRAND OUTLET","ORIGINAL EQUIPPED MACHINE","RETAILER"), cex = 0.8,
+       fill = rainbow(length(percentcontribution_retailerChannelName$netValue)))
+```
+
+###10. Aggregate 12 months sales by Retailer Group and show their percentage contribution and no. of retailers
+```{r}
+#NetValue over retailerGroupName
+AggregareretailerGroupName<-aggregate(netValue~retailerGroupName,data=ceatdata_1year,FUN="sum")
+AggregareretailerGroupName
+
+#Percentage NetValue over retailerGroupName
+AggregareretailerGroupNamePercentage<-aggregate(netValue~retailerGroupName,data=ceatdata_1year,FUN=percentfunc)
+AggregareretailerGroupNamePercentage
+
+#Count of unique retailers in retailerGroupName
+noofreatilersgroupwise<-setDT(ceatdata_1year)[, .(count = uniqueN(retailerCode)), by = retailerGroupName]
+noofreatilersgroupwise
+```
+
+###11. Aggregate 12 months sales by district and show their percentage contribution
+```{r}
+#NetValue over district
+AggregareDistrict<-aggregate(netValue~district,data=ceatdata_1year,FUN="sum")
+AggregareDistrict
+#Percentage NetValue over district
+AggregareDistrictPercentage<-aggregate(netValue~district,data=ceatdata_1year,FUN=percentfunc)
+AggregareDistrictPercentage
+```
+
+###12. Find no. of retailers for each district
+```{r}
+#Count of unique retailers in district
+noofretailersindistrict<-setDT(ceatdata_1year)[, .(count = uniqueN(retailerCode)), by = district]
+noofretailersindistrict
+```
+
+###13. Find total netvalue for each distributor
+```{r}
+dist_net<-aggregate(netValue~distributorName,data = ceatdata,FUN = sum)
+dist_net
+```
+
+###14. For each retailer derive following 3 variables: Value (netValue), buying frequency (F), Engagement (E) and Standardise those variables using scale() function
+##Note: We are not using Scale() function for normalization beacuse Scale() functions normalize the entire data frame and we want to normalize only these three variables and also for using Scale function, all the columns in the data frame should be in numeric format.we use simple formulae for normalization.
+```{r}
+#net value for each retailer
+Value<-aggregate(netValue~retailerName,data = ceatdata,FUN = sum)
+#For scaling we are using z-transformation, in this we subtract the mean and divide by the standard deviation of your variable. 
+#The result will have mean=0 and sd=1.
+Value$scalednetValue <- (Value$netValue - mean(Value$netValue )) / sd(Value$netValue )
+head(Value)
+#buying frequency (F)
+#Function to calculate unique months for each retailer
+f<-function(x)(length(unique(x)))
+#No. of months in which retailers have done the transaction
+buyingfrequency<-aggregate(month~retailerName,data = ceatdata,FUN = f)
+#scaling buyingfrequency
+buyingfrequency$scaledbuyingfrequency <- (buyingfrequency$month - mean(buyingfrequency$month)) / sd(buyingfrequency$month )
+head(buyingfrequency)
+
+#Engagement (E)
+#Function to calculate unique categories purchased
+f<-function(x)(length(unique(x)))
+#No. of unique categories purchased
+Engagement<-aggregate(category~retailerName,data = ceatdata,FUN = f)
+#scaling Engagement
+Engagement$scaledEngagement <- (Engagement$category - mean(Engagement$category)) / sd(Engagement$category )
+head(Engagement)
+```
+
+###15. Identify top 3 product categories for overall and for each district
+```{r}
+#Overall top 3
+#Calculating net value for each product category
+category_netvalue<-aggregate(netValue~category,data = ceatdata,FUN = sum)
+#Arranging data in descending order so that product category with highest net value is at the top
+top_category<-category_netvalue[order(-category_netvalue$netValue),]
+#Top 3 product categories in terms of net value
+top_3productcategories<-head(top_category,n=3)
+top_3productcategories
+#Calculating net value district wise for each product category
+dist_category_netvalue<-aggregate(netValue~district+category,data = ceatdata,FUN = sum)
+#Arranging data in descending order so that district with highest net value for a product category is at the top
+dist_top_category<-dist_category_netvalue[order(-dist_category_netvalue$netValue),]
+#Top 3 districtwise product categories in terms of net value
+dist_top_3<-head(dist_top_category,n=3)
+dist_top_3
+```
